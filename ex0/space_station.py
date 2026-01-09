@@ -47,7 +47,7 @@ class SpaceStation(BaseModel):
 
 def loading_json(file_name: str) -> list:
     """
-    jsonファイルから宇宙ステーションの情報を取得する
+    jsonファイルから情報を取得する
     """
 
     current_dir = Path(__file__).parent
@@ -104,10 +104,10 @@ def main() -> None:
     print("Space Station Data Validation\n"
           "========================================")
 
-    station_data = loading_json("space_stations.json")
+    target_data = loading_json("space_stations.json")
     invalid_data = loading_json("invalid_stations.json")
 
-    valid_station_data(station_data)
+    valid_station_data(target_data)
     valid_station_data(invalid_data)
 
 
