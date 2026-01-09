@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import sys
-try:
+import sys  # 強制終了するためにつかう
+try:  # .pydanticがインストールされているか確認
     from pydantic import BaseModel, Field, ValidationError, model_validator
 except ImportError as e:
     print(f"ImportError: {e}")
@@ -20,7 +20,7 @@ import json
 
 class ContactType(str, Enum):
     """
-    コンタクト方法を定義するクラス
+    エイリアンと遭遇したシチュエーションを定義
     """
 
     RADIO = "radio"
@@ -56,8 +56,18 @@ def loading_json(file_name: str) -> list:
 
 class AlienContact(BaseModel):
     """
-    エイリアンコンタクトの属性モデル
-    pydantic.BaseBodelを継承し、型の検証を担う
+    遭遇ログのテンプレート
+    pydantic.BaseBodelを継承し、テンプレートどおりかの検証を担う
+
+        • contact_id: String, 5-15 characters
+        • timestamp: DateTime of contact
+        • location: String, 3-100 characters
+        • contact_type: ContactType enum
+        • signal_strength: Float, 0.0-10.0 scale
+        • duration_minutes: Integer, 1-1440 (max 24 hours)
+        • witness_count: Integer, 1-100 people
+        • message_received: Optional string, max 500 characters
+        • is_verified: Boolean, defaults to False
     """
 
     contact_id: str = Field(min_length=5,
@@ -82,16 +92,47 @@ class AlienContact(BaseModel):
     is_verified: bool = Field(default=False,
                               description="検証済みか")
 
+    # .これがafterでついているとAlianContactで型検証し終わってから追加で検証してくれる
+    # .条件が他属性に依存する場合に用いられる
+    @model_validator(mode="after")
+    def after_valid_contact_data(self) -> "AlienContact":
+        """
+        ４つの項目を追加検証する
+
+            • Contact ID must start with "AC" (Alien Contact)
+            • Physical contact reports must be verified
+            • Telepathic contact requires at least 3 witnesses
+            • Strong signals (> 7.0) should include received messages
+        """
+
+        # .ここでValueErrorを吐くと、pydanticが勝手にValidationErrorにしてくれる
+        if not self.contact_id.startswith("AC"):
+            raise ValueError("Contact ID must start with 'AC'")
+
+        if self.contact_type == "physical" and not self.is_verified:
+            raise ValueError(
+                "Physical contact reports must be verified explicitly.")
+
+        if self.contact_type == "telepathic" and not 3 <= self.witness_count:
+            raise ValueError("Telepathic contact requires at "
+                             f"least 3 witnesses (got {self.witness_count}).")
+
+        if 7 <= self.signal_strength and not self.message_received:
+            raise ValueError("Strong signals (> 7.0) must "
+                             "include a received message.")
+
+        return self
+
 
 def valid_contact_data(contact_data: list) -> None:
     """
-    渡されたステーションデータを検証する
+    渡された遭遇データを検証後、printする
+    属性が足りなかったり、エラーだったらその都度エラーを吐く
     """
 
     for data in contact_data:
         try:
-            AlienContact(**data)
-            contact = after_valid_contact_data()
+            contact = AlienContact(**data)
             print("Valid contact created:\n"
                   f"ID: {contact.contact_id}\n"
                   f"Type: {contact.contact_type}\n"
@@ -107,39 +148,13 @@ def valid_contact_data(contact_data: list) -> None:
         except ValidationError as e:
             print("Validation error:")
             for err in e.errors():
-                print(f"    - {err['loc'][0]}: {err['msg']}")
-
-
-@model_validator(mode="after")
-def after_valid_contact_data(self: AlienContact) -> AlienContact:
-    """
-    ４つの項目を追加検証する
-    • Contact ID must start with "AC" (Alien Contact)
-    • Physical contact reports must be verified
-    • Telepathic contact requires at least 3 witnesses
-    • Strong signals (> 7.0) should include received messages
-    """
-
-    # .ここでValueErrorを吐くと、勝手にValidationErrorにしてくれる
-    if not self.contact_id.startswith("AC"):
-        raise ValueError("Contact ID must start with 'AC'")
-
-    if self.contact_type == "physical" and not self.is_verified:
-        raise ValueError(
-            "Physical contact reports must be verified explicitly.")
-
-    if self.contact_type == "telepathic" and not 3 <= self.witness_count:
-        raise ValueError("Telepathic contact requires at "
-                         f"least 3 witnesses (got {self.witness_count}).")
-
-    if 7 <= self.signal_strength and not self.message_received:
-        raise ValueError("Strong signals (> 7.0) must "
-                         "include a received message.")
+                location = err["loc"][0] if err["loc"] else "Model Rules"
+                print(f"    - {location}: {err['msg']}")
 
 
 def main() -> None:
     """
-    宇宙ステーションの重要データの検証システム
+    未知との遭遇ログの検証システム
     """
 
     print("Alien Contact Log Validation\n"
