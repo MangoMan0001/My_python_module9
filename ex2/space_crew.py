@@ -11,23 +11,10 @@ except ImportError as e:
     print("    pip install pydantic")
     sys.exit(1)
 
-from typing import Optional
 from pathlib import Path
 from datetime import datetime
 from enum import Enum
 import json
-
-
-class Crew_Rank(str, Enum):
-    """
-    エイリアンと遭遇したシチュエーションを定義
-    """
-
-    CADET = "cadet"
-    OFFICER = "officer"
-    LIEUTENANT = "lieutenant"
-    CAPTAIN = "captain"
-    COMMANDER = "commander"
 
 
 def loading_json(file_name: str) -> list:
@@ -55,6 +42,18 @@ def loading_json(file_name: str) -> list:
         return json.load(f)
 
 
+class Crew_Rank(str, Enum):
+    """
+    クルーの階級を定義
+    """
+
+    CADET = "cadet"
+    OFFICER = "officer"
+    LIEUTENANT = "lieutenant"
+    CAPTAIN = "captain"
+    COMMANDER = "commander"
+
+
 class CrewMember(BaseModel):
     """
     クルーメンバーのテンプレート
@@ -73,91 +72,112 @@ class CrewMember(BaseModel):
                            max_length=10,
                            description="メンバーID")
     name: str = Field(min_length=2,
-                      max_length=-50,
+                      max_length=50,
                       description="メンバー名")
-    rank: Rank enum
-• age: Integer, 18-80 years
-• specialization: String, 3-30 characters
-• years_experience: Integer, 0-50 years
-• is_active: Boolean, defaults to True
+    rank: Crew_Rank
+    age: int = Field(ge=18,
+                     le=80,
+                     description="年齢")
+    specialization: str = Field(min_length=3,
+                                max_length=30,
+                                description="専門性")
+    years_experience: int = Field(ge=0,
+                                  le=50,
+                                  description="経験年数")
+    is_active: bool = True
 
 
+class SpaceMission(BaseModel):
+    """
+    ミッションのテンプレート
+    pydantic.BaseBodelを継承し、テンプレートどおりかの検証を担う
 
-    contact_id: str = Field(min_length=5,
+        • mission_id: String, 5-15 characters
+        • mission_name: String, 3-100 characters
+        • destination: String, 3-50 characters
+        • launch_date: DateTime
+        • duration_days: Integer, 1-3650 days (max 10 years)
+        • crew: List of CrewMember, 1-12 members
+        • mission_status: String, defaults to "planned"
+        • budget_millions: Float, 1.0-10000.0 million dollars
+    """
+
+    mission_id: str = Field(min_length=5,
                             max_length=15,
-                            description="エイリアンコンタクトID")
-    timestamp: datetime
-    location: str = Field(min_length=3,
-                          max_length=100,
-                          description="コンタクトロケーション")
-    contact_type: ContactType
-    signal_strength: float = Field(ge=0.0,
-                                   le=10.0,
-                                   description="通信強度")
-    duration_minutes: int = Field(ge=1,
-                                  le=1440,
-                                  description="通信時間最大24時間")
-    witness_count: int = Field(ge=1,
-                               le=100,
-                               description="目撃者の人数")
-    message_received: Optional[str] = Field(max_length=500,
-                                            description="受信メッセージ")
-    is_verified: bool = Field(default=False,
-                              description="検証済みか")
+                            description="ミッションID")
+    mission_name: str = Field(min_length=3,
+                              max_length=100,
+                              description="ミッション名")
+    destination: str = Field(min_length=3,
+                             max_length=50,
+                             description="行き先")
+    launch_date: datetime
+    duration_days: int = Field(ge=1,
+                               le=3650,
+                               description="期間 最大10年")
+    crew: list[CrewMember] = Field(min_length=1,
+                                   max_length=12,
+                                   description="クルー")
+    mission_status: str = "planned"
+    budget_millions: float = Field(ge=1.0,
+                                   le=10000.0,
+                                   description="資金")
 
-    # .これがafterでついているとAlianContactで型検証し終わってから追加で検証してくれる
-    # .条件が他属性に依存する場合に用いられる
     @model_validator(mode="after")
-    def after_valid_contact_data(self) -> "AlienContact":
+    def after_valid_contact_data(self) -> "SpaceMission":
         """
         ４つの項目を追加検証する
 
-            • Contact ID must start with "AC" (Alien Contact)
-            • Physical contact reports must be verified
-            • Telepathic contact requires at least 3 witnesses
-            • Strong signals (> 7.0) should include received messages
+            • Mission ID must start with "M"
+            • Must have at least one Commander or Captain
+            • Long missions (> 365 days) need 50% experienced crew (5+ years)
+            • All crew members must be active
         """
 
-        # .ここでValueErrorを吐くと、pydanticが勝手にValidationErrorにしてくれる
-        if not self.contact_id.startswith("AC"):
-            raise ValueError("Contact ID must start with 'AC'")
+        if not self.mission_id.startswith("M"):
+            raise ValueError("Contact ID must start with 'M'")
 
-        if self.contact_type == "physical" and not self.is_verified:
-            raise ValueError(
-                "Physical contact reports must be verified explicitly.")
+        if not any(m.rank in (Crew_Rank.CAPTAIN, Crew_Rank.COMMANDER)
+                   for m in self.crew):
+            raise ValueError("Must have at least one Commander or Captain")
 
-        if self.contact_type == "telepathic" and not 3 <= self.witness_count:
-            raise ValueError("Telepathic contact requires at "
-                             f"least 3 witnesses (got {self.witness_count}).")
+        if 365 < self.duration_days:
+            veteran_crew = [m for m in self.crew if 5 <= m.years_experience]
+            if not 50 <= len(veteran_crew) / len(self.crew) * 100:
+                raise ValueError(
+                    "Long missions (> 365 days) "
+                    "need 50% experienced crew (5+ years)")
 
-        if 7 <= self.signal_strength and not self.message_received:
-            raise ValueError("Strong signals (> 7.0) must "
-                             "include a received message.")
+        for m in self.crew:
+            if not m.is_active:
+                raise ValueError("All crew members must be active")
 
         return self
 
 
-def valid_contact_data(contact_data: list) -> None:
+def valid_mission_data(contact_data: list) -> None:
     """
-    渡された遭遇データを検証後、printする
+    渡されたmissionデータを検証後、printする
     属性が足りなかったり、エラーだったらその都度エラーを吐く
     """
 
     for data in contact_data:
         try:
-            contact = AlienContact(**data)
-            print("Valid contact created:\n"
-                  f"ID: {contact.contact_id}\n"
-                  f"Type: {contact.contact_type}\n"
-                  f"Time: {contact.timestamp}\n"
-                  f"Location: {contact.location}\n"
-                  f"Signal: {contact.signal_strength}%\n"
-                  f"Duration: {contact.duration_minutes} minutes%\n"
-                  f"Witnesses: {contact.witness_count}"
-                  f"Message: {contact.message_received}"
-                  f"Verified: {contact.is_verified}")
+            contact = SpaceMission(**data)
+            print("Valid mission created:\n"
+                  f"Mission: {contact.mission_name}\n"
+                  f"ID: {contact.mission_id}\n"
+                  f"Destination: {contact.destination}\n"
+                  f"Duration: {contact.duration_days} days\n"
+                  f"Budget: ${contact.budget_millions}M\n"
+                  f"Crew size: {len(contact.crew)}\n"
+                  "Crew members:")
+            for member in contact.crew:
+                print(f"- {member.name} ({member.rank}) "
+                      f"- {member.specialization}")
             print()
             print("========================================")
+
         except ValidationError as e:
             print("Validation error:")
             for err in e.errors():
@@ -170,14 +190,14 @@ def main() -> None:
     未知との遭遇ログの検証システム
     """
 
-    print("Alien Contact Log Validation\n"
+    print("Space Mission Crew Validation\n"
           "========================================")
 
-    target_data = loading_json("alien_contacts.json")
-    invalid_data = loading_json("invalid_contacts.json")
+    target_data = loading_json("space_missions.json")
+    # invalid_data = loading_json("invalid_missions.json")
 
-    valid_contact_data(target_data)
-    valid_contact_data(invalid_data)
+    valid_mission_data(target_data)
+    # valid_mission_data(invalid_data.json)
 
 
 if __name__ == "__main__":

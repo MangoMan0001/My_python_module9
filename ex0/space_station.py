@@ -17,6 +17,31 @@ from datetime import datetime
 import json
 
 
+def loading_json(file_name: str) -> list:
+    """
+    jsonファイルから情報を取得する
+    """
+
+    current_dir = Path(__file__).parent
+    target_dir = current_dir.parent / "tools" / "generated_data"
+    file_path = target_dir / file_name
+
+    if not file_path.exists():
+        print("jsonファイルが見つかりません。")
+        print("ルートディレクトリにて以下のコマンドを実行してください。")
+        print("    wget {data_generator.tar}")
+        print("    mkdir tools")
+        print("    mv data_exporter.py tools")
+        print("    python data_exporter.py")
+        sys.exit(1)
+
+    if not file_path.exists():
+        print(f"File not found: {file_path}")
+        return []
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 class SpaceStation(BaseModel):
     """
     宇宙ステーションの属性モデル
@@ -45,31 +70,6 @@ class SpaceStation(BaseModel):
                                  description="コメント")
 
 
-def loading_json(file_name: str) -> list:
-    """
-    jsonファイルから情報を取得する
-    """
-
-    current_dir = Path(__file__).parent
-    target_dir = current_dir.parent / "tools" / "generated_data"
-    file_path = target_dir / file_name
-
-    if not file_path.exists():
-        print("jsonファイルが見つかりません。")
-        print("ルートディレクトリにて以下のコマンドを実行してください。")
-        print("    wget {data_generator.tar}")
-        print("    mkdir tools")
-        print("    mv data_exporter.py tools")
-        print("    python data_exporter.py")
-        sys.exit(1)
-
-    if not file_path.exists():
-        print(f"File not found: {file_path}")
-        return []
-    with open(file_path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
 def valid_station_data(station_data: list) -> None:
     """
     渡されたステーションデータを検証する
@@ -89,6 +89,7 @@ def valid_station_data(station_data: list) -> None:
                   f"Maintenance: {station.last_maintenance}"
                   f"note: {station.notes}")
             print()
+
             print("========================================")
         except ValidationError as e:
             print("Validation error:")

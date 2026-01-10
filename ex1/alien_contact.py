@@ -18,17 +18,6 @@ from enum import Enum
 import json
 
 
-class ContactType(str, Enum):
-    """
-    エイリアンと遭遇したシチュエーションを定義
-    """
-
-    RADIO = "radio"
-    VISUAL = "visual"
-    PHYSICAL = "physical"
-    TELEPATHIC = "telepathic"
-
-
 def loading_json(file_name: str) -> list:
     """
     jsonファイルから情報を取得する
@@ -52,6 +41,17 @@ def loading_json(file_name: str) -> list:
         return []
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+class ContactType(str, Enum):
+    """
+    エイリアンと遭遇したシチュエーションを定義
+    """
+
+    RADIO = "radio"
+    VISUAL = "visual"
+    PHYSICAL = "physical"
+    TELEPATHIC = "telepathic"
 
 
 class AlienContact(BaseModel):
@@ -145,6 +145,7 @@ def valid_contact_data(contact_data: list) -> None:
                   f"Verified: {contact.is_verified}")
             print()
             print("========================================")
+
         except ValidationError as e:
             print("Validation error:")
             for err in e.errors():
