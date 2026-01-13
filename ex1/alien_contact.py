@@ -31,9 +31,12 @@ def loading_json(file_name: str) -> list:
         print("jsonファイルが見つかりません。")
         print("ルートディレクトリにて以下のコマンドを実行してください。")
         print("    wget {data_generator.tar}")
+        print("    tar -xzf data_generator.tar")
+        print("    rm data_generator.tar")
         print("    mkdir tools")
-        print("    mv data_exporter.py tools")
-        print("    python data_exporter.py")
+        print("    mv data_*.py tools")
+        print("    python tools/data_exporter.py")
+        print("    mv generated_data tools")
         sys.exit(1)
 
     if not file_path.exists():

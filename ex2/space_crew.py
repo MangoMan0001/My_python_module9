@@ -30,9 +30,12 @@ def loading_json(file_name: str) -> list:
         print("jsonファイルが見つかりません。")
         print("ルートディレクトリにて以下のコマンドを実行してください。")
         print("    wget {data_generator.tar}")
+        print("    tar -xzf data_generator.tar")
+        print("    rm data_generator.tar")
         print("    mkdir tools")
-        print("    mv data_exporter.py tools")
-        print("    python data_exporter.py")
+        print("    mv data_*.py tools")
+        print("    python tools/data_exporter.py")
+        print("    mv generated_data tools")
         sys.exit(1)
 
     if not file_path.exists():
@@ -42,7 +45,7 @@ def loading_json(file_name: str) -> list:
         return json.load(f)
 
 
-class Crew_Rank(str, Enum):
+class CrewRank(str, Enum):
     """
     クルーの階級を定義
     """
@@ -74,7 +77,7 @@ class CrewMember(BaseModel):
     name: str = Field(min_length=2,
                       max_length=50,
                       description="メンバー名")
-    rank: Crew_Rank
+    rank: CrewRank
     age: int = Field(ge=18,
                      le=80,
                      description="年齢")
@@ -137,7 +140,7 @@ class SpaceMission(BaseModel):
         if not self.mission_id.startswith("M"):
             raise ValueError("Contact ID must start with 'M'")
 
-        if not any(m.rank in (Crew_Rank.CAPTAIN, Crew_Rank.COMMANDER)
+        if not any(m.rank in (CrewRank.CAPTAIN, CrewRank.COMMANDER)
                    for m in self.crew):
             raise ValueError("Must have at least one Commander or Captain")
 
