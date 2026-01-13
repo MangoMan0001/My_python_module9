@@ -36,12 +36,8 @@ def loading_json(file_name: str) -> list:
         print("    mv data_*.py tools")
         print("    python tools/data_exporter.py")
         print("    mv generated_data tools")
-
         sys.exit(1)
 
-    if not file_path.exists():
-        print(f"File not found: {file_path}")
-        return []
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -49,7 +45,7 @@ def loading_json(file_name: str) -> list:
 class SpaceStation(BaseModel):
     """
     宇宙ステーションの属性モデル
-    pydantic.BaseBodelを継承し、型の検証を担う
+    pydantic.BaseModelを継承し、型の検証を担う
     """
 
     station_id: str = Field(min_length=3,

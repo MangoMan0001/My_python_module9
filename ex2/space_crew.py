@@ -38,9 +38,6 @@ def loading_json(file_name: str) -> list:
         print("    mv generated_data tools")
         sys.exit(1)
 
-    if not file_path.exists():
-        print(f"File not found: {file_path}")
-        return []
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -60,7 +57,7 @@ class CrewRank(str, Enum):
 class CrewMember(BaseModel):
     """
     クルーメンバーのテンプレート
-    pydantic.BaseBodelを継承し、テンプレートどおりかの検証を担う
+    pydantic.BaseModelを継承し、テンプレートどおりかの検証を担う
 
         • member_id: String, 3-10 characters
         • name: String, 2-50 characters
@@ -138,7 +135,7 @@ class SpaceMission(BaseModel):
         """
 
         if not self.mission_id.startswith("M"):
-            raise ValueError("Contact ID must start with 'M'")
+            raise ValueError("Mission ID must start with 'M'")
 
         if not any(m.rank in (CrewRank.CAPTAIN, CrewRank.COMMANDER)
                    for m in self.crew):
@@ -200,7 +197,31 @@ def main() -> None:
     # invalid_data = loading_json("invalid_missions.json")
 
     valid_mission_data(target_data)
-    # valid_mission_data(invalid_data.json)
+    # valid_mission_data(invalid_data)
+
+    manual_invalid_data = [
+        {
+            "mission_id": "M_FAIL_ID",
+            "mission_name": "Failure Mission",
+            "destination": "Nowhere",
+            "launch_date": "2025-01-01T00:00:00",
+            "duration_days": 10,
+            "budget_millions": 100.0,
+            "crew": [
+                {
+                    "member_id": "C001",
+                    "name": "Rookie",
+                    "rank": "cadet",      # Captain/Commanderがいない
+                    "age": 20,
+                    "specialization": "Cleaning",
+                    "years_experience": 1,
+                    "is_active": True
+                }
+            ]
+        }
+    ]
+
+    valid_mission_data(manual_invalid_data)
 
 
 if __name__ == "__main__":

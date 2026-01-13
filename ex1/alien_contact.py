@@ -39,9 +39,6 @@ def loading_json(file_name: str) -> list:
         print("    mv generated_data tools")
         sys.exit(1)
 
-    if not file_path.exists():
-        print(f"File not found: {file_path}")
-        return []
     with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -60,7 +57,7 @@ class ContactType(str, Enum):
 class AlienContact(BaseModel):
     """
     遭遇ログのテンプレート
-    pydantic.BaseBodelを継承し、テンプレートどおりかの検証を担う
+    pydantic.MaseBodelを継承し、テンプレートどおりかの検証を担う
 
         • contact_id: String, 5-15 characters
         • timestamp: DateTime of contact
